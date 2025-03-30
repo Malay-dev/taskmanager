@@ -36,21 +36,12 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import {
-  CheckCircle2Icon,
-  CheckCircleIcon,
-  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsLeftIcon,
   ChevronsRightIcon,
-  ColumnsIcon,
   GripVerticalIcon,
-  LoaderIcon,
-  MoreVerticalIcon,
-  PlusIcon,
-  TrendingUpIcon,
 } from "lucide-react";
-import { toast } from "sonner";
 import { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";
@@ -58,13 +49,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -83,14 +71,31 @@ import {
 } from "@/components/ui/table";
 import { Calendar, AlertTriangle, MoreHorizontal } from "lucide-react";
 import { formatDate } from "../lib/utils";
+import MainHeader from "./MainHeader";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "@/redux/store";
+import { Task } from "@/lib/types";
+import { updateTask } from "../redux/slices/tasksSlice";
+import type { AppDispatch } from "../redux/store";
 
 export const schema = z.object({
-  id: z.number(),
+  id: z.string(),
   title: z.string(),
-  category: z.object({ name: z.string() }).nullable(),
-  priority: z.string(),
-  due_date: z.string().nullable(),
+  description: z.string().optional(),
   completed: z.boolean(),
+  due_date: z.string().nullable(),
+  priority: z.string(),
+  category_id: z.string(),
+  user_id: z.string(),
+  created_at: z.string(),
+  category: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      user_id: z.string(),
+      created_at: z.string(),
+    })
+    .nullable(),
 });
 
 const columns: ColumnDef<z.infer<typeof schema>>[] = [
@@ -108,18 +113,34 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   {
     id: "select",
     header: () => null,
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.original.completed}
-        onCheckedChange={() => {
-          // Handle task completion toggle
-          row.toggleSelected();
-        }}
-        aria-label={
-          row.original.completed ? "Mark as incomplete" : "Mark as complete"
+    cell: ({ row }) => {
+      const dispatch = useDispatch<AppDispatch>();
+
+      const handleToggleComplete = async () => {
+        console.log("Checkbox clicked for task:", row.original.id); // Debugging log
+        try {
+          await dispatch(
+            updateTask({
+              id: row.original.id,
+              completed: !row.original.completed,
+            })
+          ).unwrap();
+          console.log("Task updated successfully");
+        } catch (error) {
+          console.error("Error updating task:", error);
         }
-      />
-    ),
+      };
+
+      return (
+        <Checkbox
+          checked={row.original.completed}
+          onCheckedChange={handleToggleComplete}
+          aria-label={
+            row.original.completed ? "Mark as incomplete" : "Mark as complete"
+          }
+        />
+      );
+    },
     enableSorting: false,
     enableHiding: false,
   },
@@ -128,9 +149,9 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     header: "Task",
     cell: ({ row }) => (
       <span
-        className={
+        className={`${
           row.original.completed ? "line-through text-muted-foreground" : ""
-        }>
+        }`}>
         {row.original.title}
       </span>
     ),
@@ -139,9 +160,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     accessorKey: "category",
     header: "Category",
     cell: ({ row }) =>
-      row.original.category ? (
-        <Badge variant="secondary">{row.original.category.name}</Badge>
-      ) : null,
+      row.original.category ? <span>{row.original.category.name}</span> : null,
   },
   {
     accessorKey: "priority",
@@ -187,7 +206,11 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     cell: ({ row }) => (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon">
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={row.original.completed} // Disable actions if the task is completed
+          >
             <MoreHorizontal className="h-4 w-4" />
             <span className="sr-only">Open menu</span>
           </Button>
@@ -242,6 +265,10 @@ export function DataTable({
   data: z.infer<typeof schema>[];
 }) {
   const [data, setData] = React.useState(() => initialData);
+  const categories = useSelector(
+    (state: RootState) => state.categories.categories
+  );
+
   const [rowSelection, setRowSelection] = React.useState({});
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
@@ -264,6 +291,10 @@ export function DataTable({
     () => data.map(({ id }) => id.toString()), // Ensure IDs are strings
     [data]
   );
+
+  function handleTaskCreated(newTask: Task) {
+    setData((prevData) => [...prevData, newTask]);
+  }
 
   const table = useReactTable({
     data,
@@ -307,62 +338,11 @@ export function DataTable({
 
   return (
     <div className="flex w-full flex-col justify-start gap-6">
-      <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
-        </Label>
-        <Select defaultValue="outline">
-          <SelectTrigger
-            className="@4xl/main:hidden flex w-fit"
-            id="view-selector">
-            <SelectValue placeholder="Select a view" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="outline">Outline</SelectItem>
-            <SelectItem value="past-performance">Past Performance</SelectItem>
-            <SelectItem value="key-personnel">Key Personnel</SelectItem>
-            <SelectItem value="focus-documents">Focus Documents</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <ColumnsIcon />
-                <span className="hidden lg:inline">Customize Columns</span>
-                <span className="lg:hidden">Columns</span>
-                <ChevronDownIcon />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              {table
-                .getAllColumns()
-                .filter(
-                  (column) =>
-                    typeof column.accessorFn !== "undefined" &&
-                    column.getCanHide()
-                )
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }>
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <PlusIcon />
-            <span className="hidden lg:inline">Add Section</span>
-          </Button>
-        </div>
-      </div>
+      <MainHeader
+        table={table}
+        categories={categories}
+        onTaskCreated={handleTaskCreated}
+      />
       <div className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6">
         <div className="overflow-hidden rounded-lg border">
           <DndContext
