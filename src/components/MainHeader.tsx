@@ -18,13 +18,27 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "sonner"; // Import toast from sonner
+import { toast } from "sonner";
 import TaskForm from "./TaskForm";
+import TaskFilter from "./TaskFilter";
 import { useDispatch } from "react-redux";
 import { createCategory } from "../redux/slices/categoriesSlice";
 import type { AppDispatch } from "../redux/store";
+import type { Category } from "../lib/types";
+import type { Table } from "@tanstack/react-table";
+import { Task } from "../lib/types";
 
-const MainHeader = ({ table, categories, onTaskCreated }) => {
+interface MainHeaderProps {
+  table: Table<Task>;
+  categories: Category[];
+  onTaskCreated: () => void;
+}
+
+const MainHeader: React.FC<MainHeaderProps> = ({
+  table,
+  categories,
+  onTaskCreated,
+}) => {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
@@ -40,9 +54,9 @@ const MainHeader = ({ table, categories, onTaskCreated }) => {
 
       setCategoryName("");
       setIsCategoryDialogOpen(false);
-      toast.success("Category created successfully"); // Use sonner toast
-    } catch (error: any) {
-      toast.error("Error creating category: " + error); // Use sonner toast
+      toast.success("Category created successfully");
+    } catch (error: unknown) {
+      toast.error("Error creating category: " + error);
     } finally {
       setIsLoading(false);
     }
@@ -50,6 +64,9 @@ const MainHeader = ({ table, categories, onTaskCreated }) => {
 
   return (
     <div className="flex items-center justify-between px-4 lg:px-6">
+      <div className="flex items-center gap-2">
+        <TaskFilter categories={categories} />
+      </div>
       <div className="flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
