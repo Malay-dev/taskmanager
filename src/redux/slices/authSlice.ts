@@ -1,5 +1,10 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import type { User } from '@supabase/supabase-js';
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+interface User extends SupabaseUser {
+  first_name?: string;
+  last_name?: string;
+}
 
 interface AuthState {
   user: User | null;
@@ -14,7 +19,7 @@ const initialState: AuthState = {
 };
 
 const authSlice = createSlice({
-  name: 'auth',
+  name: "auth",
   initialState,
   reducers: {
     setUser: (state, action: PayloadAction<User>) => {
