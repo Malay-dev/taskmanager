@@ -1,8 +1,8 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { supabase } from "../../lib/supabase";
-import { database } from "../../lib/database.ts";
 import type { Category } from "../../lib/types";
 import type { RootState } from "../store";
+import { database } from "@/lib/database";
 
 interface CategoriesState {
   categories: Category[];
@@ -20,8 +20,15 @@ export const fetchCategories = createAsyncThunk(
   "categories/fetchCategories",
   async (_, { rejectWithValue }) => {
     try {
-      const categories = await database.fetchCategories();
-      return categories;
+      const { data, error } = await supabase
+        .from("categories") // Replace "categories" with your actual table name
+        .select("*");
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data as Category[]; // Ensure the returned data matches the Category type
     } catch (error: any) {
       return rejectWithValue(error.message);
     }

@@ -176,6 +176,34 @@ const tasksSlice = createSlice({
       .addCase(reorderTasks.fulfilled, (state, action) => {
         state.tasks = action.payload;
         state.filteredTasks = action.payload;
+      })
+      .addCase(createTask.fulfilled, (state, action) => {
+        state.tasks.push(action.payload);
+        state.filteredTasks.push(action.payload);
+        state.loading = false;
+      })
+      .addCase(updateTask.fulfilled, (state, action) => {
+        const { id, ...updates } = action.payload;
+        const taskIndex = state.tasks.findIndex((task) => task.id === id);
+        if (taskIndex !== -1) {
+          state.tasks[taskIndex] = { ...state.tasks[taskIndex], ...updates };
+        }
+
+        const filteredTaskIndex = state.filteredTasks.findIndex(
+          (task) => task.id === id
+        );
+        if (filteredTaskIndex !== -1) {
+          state.filteredTasks[filteredTaskIndex] = {
+            ...state.filteredTasks[filteredTaskIndex],
+            ...updates,
+          };
+        }
+      })
+      .addCase(deleteTask.fulfilled, (state, action) => {
+        state.tasks = state.tasks.filter((task) => task.id !== action.payload);
+        state.filteredTasks = state.filteredTasks.filter(
+          (task) => task.id !== action.payload
+        );
       });
   },
 });

@@ -1,82 +1,67 @@
-"use client";
-
 import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../redux/store";
 import { fetchTasks, applyFilters } from "../redux/slices/tasksSlice";
 import { fetchCategories } from "../redux/slices/categoriesSlice";
-import { setTotalPages } from "../redux/slices/paginationSlice";
-import { toast } from "sonner";
 import Navbar from "../components/Navbar";
-import { DataTable } from "@/components/TaskTable_1";
+import { TaskTable } from "@/components/TaskTable_1";
 
 export default function Dashboard() {
   const dispatch = useDispatch<AppDispatch>();
 
-  const { tasks, filteredTasks } = useSelector(
-    (state: RootState) => state.tasks
+  // Selectors for tasks, categories, and filters
+  const tasks = useSelector((state: RootState) => state.tasks.tasks);
+  const filteredTasks = useSelector(
+    (state: RootState) => state.tasks.filteredTasks
   );
-  const { categories } = useSelector((state: RootState) => state.categories);
-  const { currentPage } = useSelector((state: RootState) => state.pagination);
+  const categories = useSelector(
+    (state: RootState) => state.categories.categories
+  );
   const { searchQuery, statusFilter, categoryFilter, priorityFilter } =
     useSelector((state: RootState) => state.filters);
 
-  const tasksPerPage = 10;
-
-  // Fetch categories when the component mounts
   useEffect(() => {
     dispatch(fetchCategories());
+    dispatch(fetchTasks());
   }, [dispatch]);
 
-  // Fetch tasks when the component mounts or when the current page changes
   useEffect(() => {
-    dispatch(fetchTasks())
-      .unwrap()
-      .then(({ count }) => {
-        dispatch(setTotalPages(Math.ceil(count / tasksPerPage)));
-      })
-      .catch((error) => {
-        toast.error("Error fetching tasks", {
-          description: error,
-        });
-      });
-  }, [dispatch, currentPage]);
-
-  // Apply filters whenever tasks or filters change
-  useEffect(() => {
-    dispatch(
-      applyFilters({
-        searchQuery,
-        statusFilter,
-        categoryFilter,
-        priorityFilter,
-      })
-    );
+    if (tasks.length > 0) {
+      dispatch(
+        applyFilters({
+          searchQuery,
+          statusFilter,
+          categoryFilter,
+          priorityFilter,
+        })
+      );
+    }
   }, [
     dispatch,
-    tasks,
     searchQuery,
     statusFilter,
     categoryFilter,
     priorityFilter,
+    tasks.length,
   ]);
-
-  // Map category_id to category name
+  console.log("Tasks:", tasks);
+  console.log("Filtered Tasks:", filteredTasks);
+  console.log("Categories:", categories);
   const tasksWithCategories = useMemo(() => {
     if (!categories.length) return filteredTasks;
-    console.log("Filtered Tasks:", filteredTasks);
-    console.log("Categories:", categories);
+
     return filteredTasks.map((task) => {
       const category = categories.find((cat) => cat.id === task.category_id);
       return {
         ...task,
-        due_date: task.due_date !== undefined ? task.due_date : null,
+        due_date: task.due_date || "",
         category: category
           ? { ...category }
           : { id: "", user_id: "", created_at: "", name: "Uncategorized" },
       };
     });
   }, [filteredTasks, categories]);
+  console.log("Tasks with Categories:", tasksWithCategories);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -84,7 +69,7 @@ export default function Dashboard() {
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-            <DataTable data={tasksWithCategories} />
+            <TaskTable tasks={tasksWithCategories} dispatch={dispatch} />
           </div>
         </div>
       </div>

@@ -1,12 +1,9 @@
-"use client";
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useDispatch } from "react-redux";
 import { createTask } from "../redux/slices/tasksSlice";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import {
   Form,
@@ -74,7 +71,12 @@ export default function TaskForm({ categories, onTaskCreated }: TaskFormProps) {
           due_date: values.due_date?.toISOString(),
           completed: false,
         })
-      ).unwrap();
+      )
+        .unwrap()
+        .then(() => {
+          // Notify parent component
+          onTaskCreated();
+        });
 
       form.reset({
         title: "",

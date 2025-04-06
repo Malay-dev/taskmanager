@@ -1,3 +1,5 @@
+import type React from "react";
+
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -26,19 +28,14 @@ import { createCategory } from "../redux/slices/categoriesSlice";
 import type { AppDispatch } from "../redux/store";
 import type { Category } from "../lib/types";
 import type { Table } from "@tanstack/react-table";
-import { Task } from "../lib/types";
+import type { Task } from "../lib/types";
 
 interface MainHeaderProps {
   table: Table<Task>;
   categories: Category[];
-  onTaskCreated: () => void;
 }
 
-const MainHeader: React.FC<MainHeaderProps> = ({
-  table,
-  categories,
-  onTaskCreated,
-}) => {
+const MainHeader: React.FC<MainHeaderProps> = ({ table, categories }) => {
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [categoryName, setCategoryName] = useState("");
@@ -113,11 +110,11 @@ const MainHeader: React.FC<MainHeaderProps> = ({
             <DialogHeader className="border-b pb-4">
               <DialogTitle>Add New Task</DialogTitle>
             </DialogHeader>
+            {/* Update the TaskForm component usage to not pass the onTaskCreated prop: */}
             <TaskForm
               categories={categories}
               onTaskCreated={() => {
                 setIsTaskDialogOpen(false);
-                onTaskCreated();
               }}
             />
           </DialogContent>

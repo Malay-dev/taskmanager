@@ -1,3 +1,5 @@
+import type React from "react";
+
 import { Input } from "./ui/input";
 import {
   DropdownMenu,
@@ -26,6 +28,10 @@ export default function TaskFilter({ categories }: TaskFilterProps) {
   const { searchQuery, statusFilter, categoryFilter, priorityFilter } =
     useSelector((state: RootState) => state.filters);
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    dispatch(setSearchQuery(e.target.value));
+  };
+
   return (
     <div className="mb-6 space-y-4">
       {/* Search Input */}
@@ -36,7 +42,7 @@ export default function TaskFilter({ categories }: TaskFilterProps) {
           placeholder="Search tasks..."
           className="pl-8"
           value={searchQuery}
-          onChange={(e) => dispatch(setSearchQuery(e.target.value))}
+          onChange={handleSearchChange}
         />
       </div>
 

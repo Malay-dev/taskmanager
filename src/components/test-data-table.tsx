@@ -55,6 +55,7 @@ import { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -73,6 +74,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import {
   Table,
   TableBody,
@@ -81,122 +83,202 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Calendar, AlertTriangle, MoreHorizontal } from "lucide-react";
-import { formatDate } from "../lib/utils";
 
 export const schema = z.object({
   id: z.number(),
-  title: z.string(),
-  category: z.object({ name: z.string() }).nullable(),
-  priority: z.string(),
-  due_date: z.string().nullable(),
-  completed: z.boolean(),
+  header: z.string(),
+  type: z.string(),
+  status: z.string(),
+  target: z.string(),
+  limit: z.string(),
+  reviewer: z.string(),
 });
+
+// Create a separate component for the drag handle
+function DragHandle({ id }: { id: number }) {
+  const { attributes, listeners } = useSortable({
+    id,
+  });
+
+  return (
+    <Button
+      {...attributes}
+      {...listeners}
+      variant="ghost"
+      size="icon"
+      className="size-7 text-muted-foreground hover:bg-transparent">
+      <GripVerticalIcon className="size-3 text-muted-foreground" />
+      <span className="sr-only">Drag to reorder</span>
+    </Button>
+  );
+}
 
 const columns: ColumnDef<z.infer<typeof schema>>[] = [
   {
     id: "drag",
     header: () => null,
+    cell: ({ row }) => <DragHandle id={row.original.id} />,
+  },
+  {
+    id: "select",
+    header: ({ table }) => (
+      <div className="flex items-center justify-center">
+        <Checkbox
+          checked={
+            table.getIsAllPageRowsSelected() ||
+            (table.getIsSomePageRowsSelected() && "indeterminate")
+          }
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      </div>
+    ),
     cell: ({ row }) => (
-      <div className="cursor-move px-2">
-        <GripVerticalIcon className="h-4 w-4 text-muted-foreground" />
+      <div className="flex items-center justify-center">
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
       </div>
     ),
     enableSorting: false,
     enableHiding: false,
   },
   {
-    id: "select",
-    header: () => null,
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.original.completed}
-        onCheckedChange={() => {
-          // Handle task completion toggle
-          row.toggleSelected();
-        }}
-        aria-label={
-          row.original.completed ? "Mark as incomplete" : "Mark as complete"
-        }
-      />
-    ),
-    enableSorting: false,
+    accessorKey: "header",
+    header: "Header",
+    cell: ({ row }) => {
+      return <div>{row.original.header}</div>;
+    },
     enableHiding: false,
   },
   {
-    accessorKey: "title",
-    header: "Task",
+    accessorKey: "type",
+    header: "Section Type",
     cell: ({ row }) => (
-      <span
-        className={
-          row.original.completed ? "line-through text-muted-foreground" : ""
-        }>
-        {row.original.title}
-      </span>
+      <div className="w-32">
+        <Badge variant="outline" className="px-1.5 text-muted-foreground">
+          {row.original.type}
+        </Badge>
+      </div>
     ),
   },
   {
-    accessorKey: "category",
-    header: "Category",
-    cell: ({ row }) =>
-      row.original.category ? (
-        <Badge variant="secondary">{row.original.category.name}</Badge>
-      ) : null,
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => (
+      <Badge
+        variant="outline"
+        className="flex gap-1 px-1.5 text-muted-foreground [&_svg]:size-3">
+        {row.original.status === "Done" ? (
+          <CheckCircle2Icon className="text-green-500 dark:text-green-400" />
+        ) : (
+          <LoaderIcon />
+        )}
+        {row.original.status}
+      </Badge>
+    ),
   },
   {
-    accessorKey: "priority",
-    header: "Priority",
-    cell: ({ row }) => {
-      const priority = row.original.priority;
-      const variant =
-        priority === "high"
-          ? "destructive"
-          : priority === "medium"
-          ? "default"
-          : "outline";
-      return <Badge variant={variant}>{priority}</Badge>;
-    },
+    accessorKey: "target",
+    header: () => <div className="w-full text-right">Target</div>,
+    cell: ({ row }) => (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
+            loading: `Saving ${row.original.header}`,
+            success: "Done",
+            error: "Error",
+          });
+        }}>
+        <Label htmlFor={`${row.original.id}-target`} className="sr-only">
+          Target
+        </Label>
+        <Input
+          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
+          defaultValue={row.original.target}
+          id={`${row.original.id}-target`}
+        />
+      </form>
+    ),
   },
   {
-    accessorKey: "due_date",
-    header: "Due Date",
+    accessorKey: "limit",
+    header: () => <div className="w-full text-right">Limit</div>,
+    cell: ({ row }) => (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
+            loading: `Saving ${row.original.header}`,
+            success: "Done",
+            error: "Error",
+          });
+        }}>
+        <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
+          Limit
+        </Label>
+        <Input
+          className="h-8 w-16 border-transparent bg-transparent text-right shadow-none hover:bg-input/30 focus-visible:border focus-visible:bg-background"
+          defaultValue={row.original.limit}
+          id={`${row.original.id}-limit`}
+        />
+      </form>
+    ),
+  },
+  {
+    accessorKey: "reviewer",
+    header: "Reviewer",
     cell: ({ row }) => {
-      const isOverdue =
-        row.original.due_date &&
-        new Date(row.original.due_date) < new Date() &&
-        !row.original.completed;
+      const isAssigned = row.original.reviewer !== "Assign reviewer";
+
+      if (isAssigned) {
+        return row.original.reviewer;
+      }
 
       return (
-        <div className="flex items-center">
-          <Calendar className="h-4 w-4 mr-1 text-muted-foreground" />
-          <span className={isOverdue ? "text-destructive font-medium" : ""}>
-            {row.original.due_date
-              ? formatDate(row.original.due_date)
-              : "No due date"}
-          </span>
-          {isOverdue && (
-            <AlertTriangle className="h-4 w-4 ml-1 text-destructive" />
-          )}
-        </div>
+        <>
+          <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
+            Reviewer
+          </Label>
+          <Select>
+            <SelectTrigger
+              className="h-8 w-40"
+              id={`${row.original.id}-reviewer`}>
+              <SelectValue placeholder="Assign reviewer" />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
+              <SelectItem value="Jamik Tashpulatov">
+                Jamik Tashpulatov
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </>
       );
     },
   },
   {
     id: "actions",
-    header: "Actions",
-    cell: ({ row }) => (
+    cell: () => (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon">
-            <MoreHorizontal className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            className="flex size-8 text-muted-foreground data-[state=open]:bg-muted"
+            size="icon">
+            <MoreVerticalIcon />
             <span className="sr-only">Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="end" className="w-32">
           <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>
-            {row.original.completed ? "Mark as incomplete" : "Mark as complete"}
-          </DropdownMenuItem>
+          <DropdownMenuItem>Make a copy</DropdownMenuItem>
+          <DropdownMenuItem>Favorite</DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem>Delete</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     ),
@@ -204,29 +286,20 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 ];
 
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id: row.original.id, // Ensure the row's unique ID is used
+  const { transform, transition, setNodeRef, isDragging } = useSortable({
+    id: row.original.id,
   });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
 
   return (
     <TableRow
+      data-state={row.getIsSelected() && "selected"}
+      data-dragging={isDragging}
       ref={setNodeRef}
-      style={style}
-      className={`relative z-0 ${isDragging ? "z-10 opacity-80" : ""}`}
-      {...attributes}
-      {...listeners}>
+      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition,
+      }}>
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -261,7 +334,7 @@ export function DataTable({
   );
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
-    () => data.map(({ id }) => id.toString()), // Ensure IDs are strings
+    () => data?.map(({ id }) => id) || [],
     [data]
   );
 
@@ -292,21 +365,19 @@ export function DataTable({
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-
     if (active && over && active.id !== over.id) {
-      setData((prevData) => {
+      setData((data) => {
         const oldIndex = dataIds.indexOf(active.id);
         const newIndex = dataIds.indexOf(over.id);
-
-        // Reorder the data array
-        const newData = arrayMove(prevData, oldIndex, newIndex);
-        return newData;
+        return arrayMove(data, oldIndex, newIndex);
       });
     }
   }
 
   return (
-    <div className="flex w-full flex-col justify-start gap-6">
+    <div
+      defaultValue="outline"
+      className="flex w-full flex-col justify-start gap-6">
       <div className="flex items-center justify-between px-4 lg:px-6">
         <Label htmlFor="view-selector" className="sr-only">
           View
@@ -324,6 +395,7 @@ export function DataTable({
             <SelectItem value="focus-documents">Focus Documents</SelectItem>
           </SelectContent>
         </Select>
+
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

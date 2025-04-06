@@ -21,11 +21,11 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  Row,
-  SortingState,
-  VisibilityState,
+  type ColumnDef,
+  type ColumnFiltersState,
+  type Row,
+  type SortingState,
+  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getFacetedRowModel,
@@ -42,7 +42,7 @@ import {
   ChevronsRightIcon,
   GripVerticalIcon,
 } from "lucide-react";
-import { z } from "zod";
+import type { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -72,74 +72,74 @@ import {
 import { Calendar, AlertTriangle, MoreHorizontal } from "lucide-react";
 import { formatDate } from "../lib/utils";
 import MainHeader from "./MainHeader";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState } from "@/redux/store";
-import { Task } from "@/lib/types";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/redux/store";
 import { updateTask } from "../redux/slices/tasksSlice";
 import type { AppDispatch } from "../redux/store";
+import type { schema } from "@/lib/schema.ts";
 
-export const schema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
-  completed: z.boolean(),
-  due_date: z.string().nullable(),
-  priority: z.string(),
-  category_id: z.string(),
-  user_id: z.string(),
-  created_at: z.string(),
-  category: z
-    .object({
-      id: z.string(),
-      name: z.string(),
-      user_id: z.string(),
-      created_at: z.string(),
-    })
-    .nullable(),
-});
+function DragHandle({ id }: { id: number }) {
+  const { attributes, listeners } = useSortable({
+    id,
+  });
 
-const columns: ColumnDef<z.infer<typeof schema>>[] = [
+  return (
+    <Button
+      {...attributes}
+      {...listeners}
+      variant="ghost"
+      size="icon"
+      className="size-7 text-muted-foreground hover:bg-transparent">
+      <GripVerticalIcon className="size-3 text-muted-foreground" />
+      <span className="sr-only">Drag to reorder</span>
+    </Button>
+  );
+}
+
+function CheckboxCell({
+  row,
+  dispatch,
+}: {
+  row: Row<z.infer<typeof schema>>;
+  dispatch: AppDispatch;
+}) {
+  const handleToggleComplete = async () => {
+    try {
+      await dispatch(
+        updateTask({
+          id: row.original.id,
+          completed: !row.original.completed,
+        })
+      ).unwrap();
+      console.log("Task updated successfully");
+    } catch (error) {
+      console.error("Error updating task:", error);
+    }
+  };
+
+  return (
+    <Checkbox
+      checked={row.original.completed}
+      onCheckedChange={handleToggleComplete}
+      aria-label={
+        row.original.completed ? "Mark as incomplete" : "Mark as complete"
+      }
+    />
+  );
+}
+const columns = (
+  dispatch: AppDispatch
+): ColumnDef<z.infer<typeof schema>>[] => [
   {
     id: "drag",
     header: () => null,
-    cell: ({ row }) => (
-      <div className="cursor-move px-2">
-        <GripVerticalIcon className="h-4 w-4 text-muted-foreground" />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
+    cell: ({ row }) => <DragHandle id={row.original.id} />,
   },
   {
     id: "select",
     header: () => null,
     cell: ({ row }) => {
-      const dispatch = useDispatch<AppDispatch>();
-
-      const handleToggleComplete = async () => {
-        console.log("Checkbox clicked for task:", row.original.id); // Debugging log
-        try {
-          await dispatch(
-            updateTask({
-              id: row.original.id,
-              completed: !row.original.completed,
-            })
-          ).unwrap();
-          console.log("Task updated successfully");
-        } catch (error) {
-          console.error("Error updating task:", error);
-        }
-      };
-
-      return (
-        <Checkbox
-          checked={row.original.completed}
-          onCheckedChange={handleToggleComplete}
-          aria-label={
-            row.original.completed ? "Mark as incomplete" : "Mark as complete"
-          }
-        />
-      );
+      return <CheckboxCell row={row} dispatch={dispatch} />;
     },
     enableSorting: false,
     enableHiding: false,
@@ -155,6 +155,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         {row.original.title}
       </span>
     ),
+    enableHiding: false,
   },
   {
     accessorKey: "category",
@@ -166,14 +167,18 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     accessorKey: "priority",
     header: "Priority",
     cell: ({ row }) => {
-      const priority = row.original.priority;
-      const variant =
-        priority === "high"
-          ? "destructive"
-          : priority === "medium"
-          ? "default"
-          : "outline";
-      return <Badge variant={variant}>{priority}</Badge>;
+      return (
+        <Badge
+          variant={
+            row.original.priority === "high"
+              ? "destructive"
+              : row.original.priority === "medium"
+              ? "default"
+              : "outline"
+          }>
+          {row.original.priority}
+        </Badge>
+      );
     },
   },
   {
@@ -227,29 +232,20 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 ];
 
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id: row.original.id, // Ensure the row's unique ID is used
+  const { transform, transition, setNodeRef, isDragging } = useSortable({
+    id: row.original.id,
   });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
 
   return (
     <TableRow
+      data-state={row.getIsSelected() && "selected"}
+      data-dragging={isDragging}
       ref={setNodeRef}
-      style={style}
-      className={`relative z-0 ${isDragging ? "z-10 opacity-80" : ""}`}
-      {...attributes}
-      {...listeners}>
+      className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition,
+      }}>
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -259,12 +255,19 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   );
 }
 
-export function DataTable({
-  data: initialData,
+export function TaskTable({
+  tasks,
+  dispatch,
 }: {
-  data: z.infer<typeof schema>[];
+  tasks: z.infer<typeof schema>[];
+  dispatch: AppDispatch;
 }) {
-  const [data, setData] = React.useState(() => initialData);
+  const [data, setData] = React.useState(tasks);
+
+  React.useEffect(() => {
+    setData(tasks);
+  }, [tasks]);
+
   const categories = useSelector(
     (state: RootState) => state.categories.categories
   );
@@ -292,13 +295,14 @@ export function DataTable({
     [data]
   );
 
-  function handleTaskCreated(newTask: Task) {
-    setData((prevData) => [...prevData, newTask]);
+  function handleTaskCreated() {
+    // This function is now simpler since we're relying on Redux updates
+    console.log("Task created, Redux will update the table");
   }
 
   const table = useReactTable({
     data,
-    columns,
+    columns: columns(dispatch),
     state: {
       sorting,
       columnVisibility,

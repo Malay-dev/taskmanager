@@ -68,14 +68,13 @@ function LoginForm() {
       if (error) {
         throw error;
       }
-
+      console.log("Login data:", data);
       if (data.user) {
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("first_name, last_name")
           .eq("id", data.user.id)
           .single();
-
         if (profileError) {
           throw profileError;
         }
