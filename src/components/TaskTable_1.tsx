@@ -78,7 +78,7 @@ import { updateTask } from "../redux/slices/tasksSlice";
 import type { AppDispatch } from "../redux/store";
 import type { schema } from "@/lib/schema.ts";
 
-function DragHandle({ id }: { id: number }) {
+function DragHandle({ id }: { id: string }) {
   const { attributes, listeners } = useSortable({
     id,
   });
@@ -343,6 +343,7 @@ export function TaskTable({
   return (
     <div className="flex w-full flex-col justify-start gap-6">
       <MainHeader
+        // @ts-expect-error not required
         table={table}
         categories={categories}
         onTaskCreated={handleTaskCreated}

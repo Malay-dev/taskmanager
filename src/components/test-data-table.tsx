@@ -37,7 +37,6 @@ import {
 } from "@tanstack/react-table";
 import {
   CheckCircle2Icon,
-  CheckCircleIcon,
   ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -48,7 +47,6 @@ import {
   LoaderIcon,
   MoreVerticalIcon,
   PlusIcon,
-  TrendingUpIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";

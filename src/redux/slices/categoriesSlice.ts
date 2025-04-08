@@ -1,7 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { supabase } from "../../lib/supabase";
 import type { Category } from "../../lib/types";
-import type { RootState } from "../store";
 import { database } from "@/lib/database";
 
 interface CategoriesState {
